@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -26,6 +27,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const MonsterBattleUI = () => {
+  const navigate = useNavigate();
   const [monsters, setMonsters] = useState([]);
   const [battleLog, setBattleLog] = useState([]);
   const [isBattling, setIsBattling] = useState(false);
@@ -202,6 +204,12 @@ const MonsterBattleUI = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Monster Battle Arena</h1>
           <p className="text-gray-600">Create your monster and battle against others!</p>
+          <button
+            onClick={() => navigate('/battle')}
+            className="mt-4 px-8 py-3 bg-red-600 text-white rounded-lg text-lg font-bold hover:bg-red-700 transform hover:scale-105 transition-all"
+          >
+            BATTLE!
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -397,6 +405,9 @@ const MonsterBattleUI = () => {
                       <p className="text-sm text-gray-600">Player: {monster.playerTag}</p>
                     </div>
                     <span className="px-2 py-1 bg-gray-200 rounded text-sm">{monster.type}</span>
+                    <div className="mt-1 text-sm text-green-600 font-bold">
+                      Wins: {monster.wins || 0}
+                    </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                     <div>HP: {monster.stats.health}</div>
