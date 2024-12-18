@@ -46,11 +46,121 @@ const BattleArena = () => {
     });
   };
 
+  // const startBattle = async () => {
+  //   if (!selectedMonsters[0] || !selectedMonsters[1]) return;
+  //   setIsBattling(true);
+  //   setBattleLog([]);
+
+  //   // Clone monsters for battle
+  //   const monster1 = {
+  //     ...selectedMonsters[0],
+  //     currentHealth: selectedMonsters[0].stats.health,
+  //     currentEnergy: 0
+  //   };
+  //   const monster2 = {
+  //     ...selectedMonsters[1],
+  //     currentHealth: selectedMonsters[1].stats.health,
+  //     currentEnergy: 0
+  //   };
+
+  //   // Randomly choose who goes first
+  //   const fighters = Math.random() < 0.5 ? [monster1, monster2] : [monster2, monster1];
+    
+  //   addFloatingText(`Battle Start: ${fighters[0].monsterName} vs ${fighters[1].monsterName}!`);
+    
+  //   let turn = 1;
+  //   const battleInterval = setInterval(async () => {
+  //     for (let i = 0; i < 2; i++) {
+  //       const attacker = fighters[i];
+  //       const defender = fighters[1-i];
+        
+  //       if (!attacker.currentHealth || !defender.currentHealth) {
+  //         clearInterval(battleInterval);
+  //         const winner = attacker.currentHealth ? attacker : defender;
+  //         addFloatingText(`${winner.monsterName} wins!`, true);
+  //         await updateWins(winner);
+  //         setIsBattling(false);
+  //         return;
+  //       }
+
+  //       // Gain energy
+  //       attacker.currentEnergy = Math.min(100, attacker.currentEnergy + 20);
+
+  //       // Choose ability
+  //       let ability = null;
+  //       if (attacker.currentEnergy >= attacker.abilities.special.energyCost) {
+  //         ability = attacker.abilities.special;
+  //       } else if (attacker.currentEnergy >= attacker.abilities.regular.energyCost) {
+  //         ability = attacker.abilities.regular;
+  //       }
+
+  //       if (ability) {
+  //         const damage = Math.floor(
+  //           (attacker.stats.attack * ability.power) / 100 * 
+  //           (1 - defender.stats.defense / 255)
+  //         );
+  //         defender.currentHealth = Math.max(0, defender.currentHealth - damage);
+  //         attacker.currentEnergy -= ability.energyCost;
+
+  //         const logText = `${attacker.monsterName} uses ${ability.name} for ${damage} damage!`;
+  //         setBattleLog(prev => [...prev, logText]);
+  //         addFloatingText(logText, true);
+  //       } else {
+  //         const logText = `${attacker.monsterName} is charging energy...`;
+  //         setBattleLog(prev => [...prev, logText]);
+  //         addFloatingText(logText);
+  //       }
+  //     }
+  //     turn++;
+  //   }, 2000);
+  // };
+
+
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const calculateDamage = (attacker, defender, ability) => {
+    // Calculate type effectiveness
+    const typeMultiplier = getTypeEffectiveness(ability.type, defender.type);
+    
+    // Calculate critical hit (based on speed)
+    const criticalChance = (attacker.stats.speed - defender.stats.speed) / 512 + 0.0625; // base 6.25% chance
+    const isCritical = Math.random() < criticalChance;
+    const criticalMultiplier = isCritical ? 1.5 : 1;
+  
+    // Calculate base damage
+    const damage = Math.floor(
+      (attacker.stats.attack * ability.power) / 100 * 
+      (1 - defender.stats.defense / 255) *
+      typeMultiplier *
+      criticalMultiplier
+    );
+  
+    return { 
+      damage, 
+      typeMultiplier, 
+      isCritical 
+    };
+  };
+  
+  const getTypeEffectiveness = (attackType, defenderType) => {
+    // Your existing type effectiveness logic
+    const effectiveness = {
+      FIRE: { EARTH: 1.5, WATER: 0.5 },
+      WATER: { FIRE: 1.5, EARTH: 0.5 },
+      EARTH: { AIR: 1.5, FIRE: 0.5 },
+      AIR: { WATER: 1.5, EARTH: 0.5 },
+      LIGHT: { DARK: 1.5, EARTH: 0.5 },
+      DARK: { LIGHT: 1.5, AIR: 0.5 }
+    };
+  
+    return effectiveness[attackType]?.[defenderType] || 1;
+  };
+  
   const startBattle = async () => {
     if (!selectedMonsters[0] || !selectedMonsters[1]) return;
     setIsBattling(true);
     setBattleLog([]);
-
+  
     // Clone monsters for battle
     const monster1 = {
       ...selectedMonsters[0],
@@ -62,30 +172,28 @@ const BattleArena = () => {
       currentHealth: selectedMonsters[1].stats.health,
       currentEnergy: 0
     };
-
+  
     // Randomly choose who goes first
     const fighters = Math.random() < 0.5 ? [monster1, monster2] : [monster2, monster1];
     
     addFloatingText(`Battle Start: ${fighters[0].monsterName} vs ${fighters[1].monsterName}!`);
-    
+    await sleep(2000);
+  
     let turn = 1;
-    const battleInterval = setInterval(async () => {
+    while (fighters[0].currentHealth > 0 && fighters[1].currentHealth > 0) {
+      addFloatingText(`Turn ${turn}`, false);
+      await sleep(1500);
+  
+      // Process each monster's turn sequentially
       for (let i = 0; i < 2; i++) {
         const attacker = fighters[i];
         const defender = fighters[1-i];
-        
-        if (!attacker.currentHealth || !defender.currentHealth) {
-          clearInterval(battleInterval);
-          const winner = attacker.currentHealth ? attacker : defender;
-          addFloatingText(`${winner.monsterName} wins!`, true);
-          await updateWins(winner);
-          setIsBattling(false);
-          return;
-        }
-
+  
         // Gain energy
         attacker.currentEnergy = Math.min(100, attacker.currentEnergy + 20);
-
+        addFloatingText(`${attacker.monsterName} gains 20 energy!`);
+        await sleep(1000);
+  
         // Choose ability
         let ability = null;
         if (attacker.currentEnergy >= attacker.abilities.special.energyCost) {
@@ -93,27 +201,64 @@ const BattleArena = () => {
         } else if (attacker.currentEnergy >= attacker.abilities.regular.energyCost) {
           ability = attacker.abilities.regular;
         }
-
+  
         if (ability) {
-          const damage = Math.floor(
-            (attacker.stats.attack * ability.power) / 100 * 
-            (1 - defender.stats.defense / 255)
-          );
+          const { damage, typeMultiplier, isCritical } = calculateDamage(attacker, defender, ability);
           defender.currentHealth = Math.max(0, defender.currentHealth - damage);
           attacker.currentEnergy -= ability.energyCost;
-
-          const logText = `${attacker.monsterName} uses ${ability.name} for ${damage} damage!`;
-          setBattleLog(prev => [...prev, logText]);
-          addFloatingText(logText, true);
+  
+          // Show attack message
+          addFloatingText(`${attacker.monsterName} uses ${ability.name}!`, true);
+          await sleep(1000);
+  
+          // Show effectiveness and critical hit messages
+          if (typeMultiplier > 1) {
+            addFloatingText("It's super effective!", true);
+            await sleep(1000);
+          } else if (typeMultiplier < 1) {
+            addFloatingText("It's not very effective...", true);
+            await sleep(1000);
+          }
+  
+          if (isCritical) {
+            addFloatingText("Critical hit!", true);
+            await sleep(1000);
+          }
+  
+          addFloatingText(`Deals ${damage} damage!`, true);
+          await sleep(1000);
         } else {
-          const logText = `${attacker.monsterName} is charging energy...`;
-          setBattleLog(prev => [...prev, logText]);
-          addFloatingText(logText);
+          addFloatingText(`${attacker.monsterName} is charging energy...`);
+          await sleep(1500);
+        }
+  
+        // Show remaining HP after each attack
+        addFloatingText(`${defender.monsterName}: ${defender.currentHealth}/${defender.stats.health} HP`);
+        await sleep(1500);
+  
+        if (defender.currentHealth <= 0) {
+          addFloatingText(`${defender.monsterName} fainted!`, true);
+          await sleep(1500);
+          addFloatingText(`${attacker.monsterName} wins!`, true);
+          await updateWins(attacker);
+          setIsBattling(false);
+          return;
         }
       }
+  
+      // Show end of turn status
+      addFloatingText(`=== End of Turn ${turn} ===`);
+      await sleep(1500);
+      addFloatingText(`${fighters[0].monsterName}: ${fighters[0].currentHealth}/${fighters[0].stats.health} HP`);
+      await sleep(1000);
+      addFloatingText(`${fighters[1].monsterName}: ${fighters[1].currentHealth}/${fighters[1].stats.health} HP`);
+      await sleep(1500);
+  
       turn++;
-    }, 2000);
+    }
   };
+  
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
