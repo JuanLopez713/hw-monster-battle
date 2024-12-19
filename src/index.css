@@ -30,3 +30,14 @@ code {
 .animate-float {
   animation: float 2s ease-out forwards;
 }
+
+@keyframes float {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(-100px);
+    opacity: 0;
+  }
+}
